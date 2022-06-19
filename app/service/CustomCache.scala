@@ -26,6 +26,13 @@ class CustomCache {
 
   def size(): Int = cacheCache.size
 
+  def values: Set[String] = cacheCache
+    .values
+    .toList
+    .flatMap(cache => cache.cache.asMap().values().toArray().toList)
+    .toSet
+    .asInstanceOf[Set[String]]
+
   def clear(): cacheCache.type = cacheCache.filterInPlace((k, v)
     => v.created.plusSeconds(v.lifeTime).isAfter(LocalDateTime.now()))
 }

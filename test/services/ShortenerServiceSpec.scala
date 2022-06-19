@@ -15,7 +15,7 @@ class ShortenerServiceSpec extends PlaySpec with GuiceOneAppPerTest with Injecti
   "ShortenerService" should {
 
     "generate values of 10 symbols with letters and digits" in {
-      var list = new mutable.ListBuffer[String]()
+      val list = new mutable.ListBuffer[String]()
       val service = new ShortenerService(new CustomCache)
       for (i <- 0 to 9) list += service.generateKey()
 

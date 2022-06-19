@@ -11,7 +11,7 @@ class ShortenerService  @Inject()(val linksMap: CustomCache) {
 
   val logger: Logger = Logger(this.getClass)
   private val maxEpochDay = 365241780471L
-  private val defaultLifeTime = 172800L
+  private val defaultLifeTime = 172800L // 2 days
   val linksCounter = new AtomicInteger(0)
 
   private val letters: List[Char] = ('a' to 'z').toList
@@ -38,13 +38,31 @@ class ShortenerService  @Inject()(val linksMap: CustomCache) {
         } else {
           val lifetime = if (obj.lifeTime == 0L) defaultLifeTime else obj.lifeTime
           val shortUrl = if (obj.shortUrl.isEmpty) generateKey() else obj.shortUrl
-          if (linksMap.get(shortUrl).isDefined) createShortLink(objectToStore)
-          linksMap.put(shortUrl, obj.url, lifetime)
-          logger.info(s"Check if here = ${linksMap.get(shortUrl)}")
-          Option(ShortLink(shortUrl, linksCounter.incrementAndGet(), ""))
+          if (linksMap.get(shortUrl).isDefined) {
+            Option(ShortLink(linksMap.get(shortUrl).get, linksCounter.incrementAndGet(), ""))
+          } else {
+            linksMap.get(obj.url) match {
+              case Some(shortLink) => Option(ShortLink(shortLink, -1, "this link is already shortened"))
+              case None =>
+                linksMap.put(shortUrl, obj.url, lifetime)
+                linksMap.put(obj.url, shortUrl, lifetime)
+                logger.info(s"Check if here = ${linksMap.get(shortUrl)}")
+                Option(ShortLink(shortUrl, linksCounter.incrementAndGet(), ""))
+            }
+          }
         }
       case None => None
     }
+  }
+
+  def getById(url: String): Option[String] = linksMap.get(url)
+
+  def clearCache(): String =  {
+    val builder = new StringBuilder()
+    builder.append(s"Cache size before cleaning = ${linksMap.size()} ")
+    linksMap.clear()
+    builder.append(s"Cache size after cleaning = ${linksMap.size()}")
+    builder.toString()
   }
 }
 

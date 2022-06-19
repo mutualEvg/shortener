@@ -2,6 +2,7 @@ package controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import model.CustomNewUrl
 import org.scalatestplus.play._
 import org.scalatestplus.play.guice._
 import play.api.Logger
@@ -22,7 +23,10 @@ class ShortenerControllerSpec extends PlaySpec with GuiceOneAppPerTest with Inje
         Helpers.stubControllerComponents(
           playBodyParsers = Helpers.stubPlayBodyParsers(materializer)
         )
-      val controller = new ShortenerController(controllerComponents, new ShortenerService(new CustomCache()), new CustomCache())
+
+      val shortenerService = new ShortenerService(new CustomCache())
+      shortenerService createShortLink(Some(CustomNewUrl("qwerty1235", "https://gooogle.com", 5000L)))
+      val controller = new ShortenerController(controllerComponents, shortenerService)
       val getUrl = controller.getById("qwerty1235").apply(FakeRequest(GET, "/shorturls"))
 
       status(getUrl) mustBe OK
@@ -36,8 +40,8 @@ class ShortenerControllerSpec extends PlaySpec with GuiceOneAppPerTest with Inje
         Helpers.stubControllerComponents(
           playBodyParsers = Helpers.stubPlayBodyParsers(materializer)
         )
-      val controller = new ShortenerController(controllerComponents, new ShortenerService(new CustomCache()), new CustomCache())
-      val postUrl = controller.addNewUrl().apply(FakeRequest(POST, "/shorturls").withJsonBody(Json.obj("description" -> "https://tuitter.com", "lifeTime" -> 10)))
+      val controller = new ShortenerController(controllerComponents, new ShortenerService(new CustomCache()))
+      val postUrl = controller.addNewUrl().apply(FakeRequest(POST, "/shorturls").withJsonBody(Json.obj("url" -> "https://tuitter.com", "lifeTime" -> 10)))
 
       status(postUrl) mustBe CREATED
       contentType(postUrl) mustBe Some("text/plain")
@@ -56,7 +60,7 @@ class ShortenerControllerSpec extends PlaySpec with GuiceOneAppPerTest with Inje
         Helpers.stubControllerComponents(
           playBodyParsers = Helpers.stubPlayBodyParsers(materializer)
         )
-      val controller = new ShortenerController(controllerComponents, new ShortenerService(new CustomCache()), new CustomCache())
+      val controller = new ShortenerController(controllerComponents, new ShortenerService(new CustomCache()))
       val body = Json.obj("shortUrl" -> "qwerty6532", "url" -> "https://teitter.com", "lifeTime" -> 10)
       logger.info(s"Custom url request body: { ${body.fields.map(el => s"${el._1} -> ${el._2}").mkString(", ")} }")
       val postUrl = controller.addCustomShortUrl().apply(
@@ -82,7 +86,7 @@ class ShortenerControllerSpec extends PlaySpec with GuiceOneAppPerTest with Inje
         Helpers.stubControllerComponents(
           playBodyParsers = Helpers.stubPlayBodyParsers(materializer)
         )
-      val controller = new ShortenerController(controllerComponents, new ShortenerService(new CustomCache()), new CustomCache())
+      val controller = new ShortenerController(controllerComponents, new ShortenerService(new CustomCache()))
       val body = Json.obj("shortUrl" -> "qwerty6532", "url" -> "https://teitter.com", "lifeTime" -> 10)
       logger.info(body.fields.mkString(", "))
       val postUrl = controller.addCustomShortUrl().apply(
@@ -102,13 +106,13 @@ class ShortenerControllerSpec extends PlaySpec with GuiceOneAppPerTest with Inje
       contentAsString(getUrl) must include("https://teitter.com")
     }
 
-    "cashe should contain not expired objects and should delete expired objects from cache" in {
+    "cache should contain not expired objects and should delete expired objects from cache" in {
       implicit val materializer = ActorMaterializer()(ActorSystem())
       val controllerComponents =
         Helpers.stubControllerComponents(
           playBodyParsers = Helpers.stubPlayBodyParsers(materializer)
         )
-      val controller = new ShortenerController(controllerComponents, new ShortenerService(new CustomCache()), new CustomCache())
+      val controller = new ShortenerController(controllerComponents, new ShortenerService(new CustomCache()))
       val body = Json.obj("shortUrl" -> "qwerty6532", "url" -> "https://teitter.com", "lifeTime" -> 5)
       logger.info(s"Custom url request body: $body")
       val postUrl = controller.addCustomShortUrl().apply(
@@ -144,7 +148,7 @@ class ShortenerControllerSpec extends PlaySpec with GuiceOneAppPerTest with Inje
       val clear2 = controller.clearCache().apply(FakeRequest(POST, "/clear"))
       status(clear2) mustBe OK
       logger.info(s"Custom url response after expiration ${contentAsString(clear2)}")
-      contentAsString(clear2) must include("Cache size before cleaning = 2 Cache size after cleaning = 1")
+      contentAsString(clear2) must include("Cache size before cleaning = 2 Cache size after cleaning = 0")
     }
   }
 }

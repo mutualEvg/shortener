@@ -10,8 +10,7 @@ import javax.inject.{Inject, _}
 
 @Singleton
 class ShortenerController @Inject()(val controllerComponents: ControllerComponents,
-                                    val shortenerService: ShortenerService,
-                                    val linksMap: CustomCache)
+                                    val shortenerService: ShortenerService)
   extends BaseController {
 
   implicit val shortenedLink = Json.format[ShortenedLink]
@@ -20,17 +19,14 @@ class ShortenerController @Inject()(val controllerComponents: ControllerComponen
   val logger: Logger = Logger(this.getClass)
   private val maxEpochDay = 365241780471L
   private val defaultLifeTime = 172800L // 2 days
-  /*
-   * This is just for test that default value is present
-   */
-  linksMap.put("qwerty1235", "https://gooogle.com", maxEpochDay)
+
 
   /*
    * Example link
    * curl localhost:8080/shorturls/qwerty1235
    */
   def goToUrl(url: String): Action[AnyContent] = Action {
-    val foundItem = linksMap.get(url)
+    val foundItem = shortenerService.getById(url)
     foundItem match {
       case Some(item) =>
         val redirectUrl = if (item.startsWith("http")) item else s"https://$item"
@@ -45,8 +41,7 @@ class ShortenerController @Inject()(val controllerComponents: ControllerComponen
    * curl localhost:8080/shorturls/qwerty1235
    */
   def getById(url: String): Action[AnyContent] = Action {
-    val foundItem = linksMap.get(url)
-    foundItem match {
+   shortenerService.getById(url) match {
       case Some(item) => Ok(Json.toJson(item))
       case None => NotFound
     }
@@ -88,18 +83,17 @@ class ShortenerController @Inject()(val controllerComponents: ControllerComponen
     )
   }
     linkToStore match {
-      case Some(newUrl) =>
-        var key = shortenerService.generateKey()
-        while (linksMap.get(key) == null) {
-          key = shortenerService.generateKey()
+      case Some(value) =>
+        val objectToStore = Some(CustomNewUrl("", value.url, value.lifeTime))
+        shortenerService.createShortLink(objectToStore) match {
+          case Some(shortLink) =>
+            if (shortLink.message.nonEmpty) Created(shortLink.message)
+            else Created(shortLink.content)
+          case None => BadRequest
         }
-        val lifetime = if (newUrl.lifeTime == 0L) defaultLifeTime else newUrl.lifeTime
-        linksMap.put(key, newUrl.description, lifetime)
-        logger.info(s"short url $key")
-        Created(key)
-      case None =>
-        BadRequest
+      case None => BadRequest
     }
+
   }
 
   /*
@@ -107,11 +101,7 @@ class ShortenerController @Inject()(val controllerComponents: ControllerComponen
    * curl -X POST 'localhost:8080/shorturls/clear'
    */
   def clearCache(): Action[AnyContent] = Action {
-    val builder = new StringBuilder()
-    builder.append(s"Cache size before cleaning = ${linksMap.size()} ")
-    linksMap.clear()
-    builder.append(s"Cache size after cleaning = ${linksMap.size()}")
-    Ok(Json.toJson(builder.toString()))
+    Ok(Json.toJson(shortenerService.clearCache()))
   }
 
 }
