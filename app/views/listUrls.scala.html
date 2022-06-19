@@ -1,0 +1,43 @@
+@import model.ShortLink
+@(widgets: Seq[ShortLink], form: Form[LinkForm.Data], postUrl: Call)(implicit request: MessagesRequestHeader)
+
+  @main("Short Links") {
+
+    <h1>Short Links</h1>
+    <h3>To use link go to localhost:9000/go/{shortlink}</h3>
+    @* Flash shows updates to a page *@
+    @request.flash.data.map{ case (name, value) =>
+      <div>@name: @value</div>
+    }
+
+    <table>
+      <thead>
+        <tr><th>Link</th><th>Number</th>
+      </thead>
+      <tbody>
+      @for(w <- widgets) {
+        <tr><td>@w.content</td><td>@w.number</td></tr>
+      }
+      </tbody>
+    </table>
+
+    <hr/>
+    @* Global errors are not tied to any particular form field *@
+    @if(form.hasGlobalErrors) {
+      @form.globalErrors.map { error: FormError =>
+        <div>
+          @error.key: @error.message
+        </div>
+      }
+    }
+
+    @helper.form(postUrl) {
+      @helper.CSRF.formField
+
+      @helper.inputText(form("url"))
+
+@*      @helper.inputText(form("number"))*@
+
+      <button>Create short link</button>
+    }
+  }

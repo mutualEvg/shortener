@@ -1,0 +1,21 @@
+# Routes
+# This file defines all application routes (Higher priority routes first)
+# https://www.playframework.com/documentation/latest/ScalaRouting
+# ~~~~
+
+GET     /shorturls/:url               controllers.ShortenerController.getById(url: String)
+POST    /shorturls                    controllers.ShortenerController.addNewUrl()
+POST    /shorturls/custom             controllers.ShortenerController.addCustomShortUrl()
+POST    /shorturls/clear              controllers.ShortenerController.clearCache()
+
+
+GET     /go/:url                      controllers.ShortenerController.goToUrl(url: String)
+# Home page
+GET     /                             controllers.ShortenerUIController.index
+
+# Widgets
+GET     /urls                    controllers.ShortenerUIController.listUrlWidgets
+POST    /urls                    controllers.ShortenerUIController.createShortUrlUI
+
+# Map static resources from the /public folder to the /assets URL path
+GET     /assets/*file               controllers.Assets.versioned(path="/public", file: Asset)
